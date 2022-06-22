@@ -8,7 +8,10 @@ import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 from datetime import timedelta, datetime, date
+
+# hosting on heroku
 import gunicorn
+from whitenoise import WhiteNoise
 
 # import finance libraries
 import yfinance as yf
@@ -24,11 +27,11 @@ from Pages import crypto
 
 
 
-sp_tickers = pd.read_csv('sp500_companies.csv', usecols=['Symbol'])
+sp_tickers = pd.read_csv('Data/sp500_companies.csv', usecols=['Symbol'])
 sp_tickers = sp_tickers['Symbol'].values.tolist()
 
 
-crypto_tickers = pd.read_csv('crypto_tickers.csv', names=['Symbol'])
+crypto_tickers = pd.read_csv('Data/crypto_tickers.csv', names=['Symbol'])
 crypto_tickers = crypto_tickers['Symbol'].values.tolist()
 
 tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers}
@@ -39,10 +42,9 @@ app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_e
 
 server = app.server
 
+server.wsgi_app = WhiteNoise(server.wsgi_app, root='Data/') 
+
 eq.register_callbacks(app)
-
-
-
 
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
