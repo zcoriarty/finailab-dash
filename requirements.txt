@@ -83,6 +83,7 @@ w3lib==1.22.0
 wcwidth==0.2.5
 websockets==10.3
 Werkzeug==2.1.2
+whitenoise==6.2.0
 yahoo-fin==0.8.9.1
 yfinance==0.1.70
 zipp==3.8.0
