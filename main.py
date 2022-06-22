@@ -245,4 +245,4 @@ def render_page_content(pathname, symbol):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8086)
+    app.run_server()
