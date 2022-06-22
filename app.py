@@ -8,6 +8,7 @@ import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 from datetime import timedelta, datetime, date
+import gunicorn
 
 # import finance libraries
 import yfinance as yf
@@ -35,6 +36,8 @@ names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+
+server = app.server
 
 eq.register_callbacks(app)
 
@@ -245,4 +248,4 @@ def render_page_content(pathname, symbol):
 
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run_server(port=8050)
