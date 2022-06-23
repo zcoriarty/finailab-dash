@@ -1,9 +1,7 @@
 # Customized Bullet chart
-import pandas as pd
 import datetime as dt
 import pandas_datareader.data as web
 import plotly.express as px
-import plotly.graph_objects as go
 from dash import html, dcc, dash_table
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output

@@ -6,7 +6,6 @@ from jupyter_dash import JupyterDash
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
-import plotly.express as px
 from datetime import timedelta, datetime, date
 
 # hosting on heroku
@@ -27,14 +26,14 @@ from Pages import crypto
 
 
 
-sp_tickers = pd.read_csv('Data/sp500_companies.csv', usecols=['Symbol'])
+sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
 sp_tickers = sp_tickers['Symbol'].values.tolist()
 
 
-crypto_tickers = pd.read_csv('Data/crypto_tickers.csv', names=['Symbol'])
+crypto_tickers = pd.read_csv('Static/Data/crypto_tickers.csv', names=['Symbol'])
 crypto_tickers = crypto_tickers['Symbol'].values.tolist()
 
-tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers}
+tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers, '/FX': [], '/fixed-income': [], '/commodities': [], '/sentiment': [], }
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
@@ -42,7 +41,7 @@ app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_e
 
 server = app.server
 
-server.wsgi_app = WhiteNoise(server.wsgi_app, root='Data/') 
+server.wsgi_app = WhiteNoise(server.wsgi_app, root='Static/') 
 
 eq.register_callbacks(app)
 
@@ -98,11 +97,24 @@ SEARCH_STYLE  = {
     'color': 'black',
     }
 
+with open('Static/Markdown Code/equity_mkdn.md', 'r') as text:
+    code = text.read() 
 
 # Sticky dash board header
 navbar = dbc.NavbarSimple(
     children=[
+        dbc.Button("See Code", id="open-modal", className="me-1", outline=True, color="primary", n_clicks=0),
         dbc.Button("Sidebar", outline=True, color="secondary", className="mr-1", id="btn_sidebar"),
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Python Code")),
+                dbc.ModalBody(dcc.Markdown(code)),
+            ],
+            id="modal-content",
+            size="lg",
+            is_open=False,
+            centered=True
+        ),
         
     ],
     sticky="top",
@@ -124,8 +136,11 @@ sidebar = html.Div(
                 dbc.NavLink("Equities", href="/equities", id="equities-link"),
                 dbc.NavLink("Crypto", href="/crypto", id="crypto-link"),
                 dbc.NavLink("FX", href="/FX", id="FX-link"),
+                dbc.NavLink("Fixed Income", href="/fixed-income", id="fixed-income-link"),
+                dbc.NavLink("Commodities", href="/commodities", id="commodities-link"),
+                dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link"),
                 html.Br(),
-                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False),
+                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
                 html.Br(),
                 # dcc.DatePickerRange(
                 #     id='my-date-picker-range',
@@ -182,6 +197,19 @@ app.layout = html.Div(
     ],
 )
 
+# toggle see code button in dash header
+def toggle_modal(n1, is_open):
+    if n1:
+        return not is_open
+    return is_open
+
+app.callback(
+    Output("modal-content", "is_open"),
+    Input("open-modal", "n_clicks"),
+    State("modal-content", "is_open"),
+)(toggle_modal)
+
+categories = ['equities', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
 # adjust dropdown tickers for a given tab
 @app.callback(Output('selected-symbol', 'options'), [Input("url", "pathname")]
 )
@@ -220,14 +248,14 @@ def toggle_sidebar(n, nclick):
 # this callback uses the current pathname to set the active state of the
 # corresponding nav link to true, allowing users to tell see page they are on
 @app.callback(
-    [Output(f"{i}-link", "active") for i in ['equities', 'crypto', 'FX']],
+    [Output(f"{i}-link", "active") for i in categories],
     [Input("url", "pathname")],
 )
 def toggle_active_links(pathname):
     if pathname == "/":
         # Treat page 1 as the homepage / index
         return True, False, False
-    return [pathname == f"/{i}" for i in ['equities', 'crypto', 'FX']]
+    return [pathname == f"/{i}" for i in categories]
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname"), Input('selected-symbol', 'value')])
@@ -237,6 +265,12 @@ def render_page_content(pathname, symbol):
     elif pathname == "/crypto":
         return crypto.make_layout(symbol)
     elif pathname == "/FX":
+        return html.P("Oh cool, this is page 3!")
+    elif pathname == "/fixed-income":
+        return html.P("Oh cool, this is page 3!")
+    elif pathname == "/commodities":
+        return html.P("Oh cool, this is page 3!")
+    elif pathname == "/sentiment":
         return html.P("Oh cool, this is page 3!")
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
@@ -250,4 +284,4 @@ def render_page_content(pathname, symbol):
 
 
 if __name__ == "__main__":
-    app.run_server(port=8050)
+    app.run_server(debug=True, port=8086)
