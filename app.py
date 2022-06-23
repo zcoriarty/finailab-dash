@@ -20,12 +20,9 @@ import pandas as pd
 
 # import files
 from Pages import equities as eq
-from Pages import crypto
+from Pages import crypto, fx
 
 # get tickers
-
-
-
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
 sp_tickers = sp_tickers['Symbol'].values.tolist()
 
@@ -265,7 +262,7 @@ def render_page_content(pathname, symbol):
     elif pathname == "/crypto":
         return crypto.make_layout(symbol)
     elif pathname == "/FX":
-        return html.P("Oh cool, this is page 3!")
+        return fx.make_layout()
     elif pathname == "/fixed-income":
         return html.P("Oh cool, this is page 3!")
     elif pathname == "/commodities":
