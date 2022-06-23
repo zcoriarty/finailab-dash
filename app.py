@@ -187,13 +187,8 @@ sidebar = html.Div(
 
 
 content = html.Div(
-	dcc.Loading(
-        id="page-content",
-        type="default",
-        children=html.Div(id="financials"),
-        color = 'white'
-    ),
-    style=CONTENT_STYLE,
+	style=CONTENT_STYLE, 
+	id="page-content",
 	)
 
 
