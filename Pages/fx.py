@@ -23,7 +23,10 @@ import yahoo_fin.stock_info as si
 import datetime as dt 
 import plotly.graph_objs as go 
 
-def make_layout():
+def make_layout(symbol):
+
+	if symbol is None:
+		symbol = 'JAPAN - YEN/US$'
 
 	return html.Div([
 		dbc.Card(
@@ -54,6 +57,9 @@ def make_layout():
 					dbc.Col([
 						update_news()
 					], width=3),
+					dbc.Col([
+						main_graph(symbol)
+					], width=9),
 				], align='center'),      
 			]), color = '#15202b' # all cell border
 		)
@@ -166,3 +172,45 @@ def update_news():
 			),
         ]
     )
+
+def main_graph(countries):
+
+	data = pd.read_csv('Static/Data/Foreign_Exchange_Rates.csv')
+	data= data.replace('ND', np.nan) 
+	data = data.dropna()
+
+	country_lst = list(data.columns[2:])
+	colour_lst = ['#91930b', '#6cdc93', '#935049', '#acbc09', '#0b92d3', '#dc8845', '#a60c7c', '#4a31f7', '#d8191c', '#e86f71','#efd4f3','#2e0e88','#7d4c26','#0bc039','#fa378c','#54f1e5','#7a0a8b','#43142d','#beaef4','#04b919','#91dde5','#2a850d']
+
+	color_dict = dict(zip(country_lst, colour_lst))
+	# Initialise figure 
+	fig = go.Figure()
+	fig.update_yaxes(automargin=True)
+
+	# Add Traces
+	fig.add_trace(
+		go.Scatter(x= data['Time Serie'],
+						y= data[countries],
+						line=dict(color=color_dict[countries]))
+	)
+
+	fig.update_layout(
+		title=countries,
+		template='plotly_dark',
+		plot_bgcolor= '#192734',
+		paper_bgcolor= '#192734',   
+	)
+	fig.update_yaxes(categoryorder='category ascending')
+
+	return html.Div([
+			dbc.Card(
+				dbc.CardBody([
+					dcc.Graph(
+						figure=fig,
+					config={
+						'displayModeBar': False
+					}
+					)
+				]), color = '#192734'
+			),  
+		])

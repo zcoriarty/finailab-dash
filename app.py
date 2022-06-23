@@ -17,6 +17,7 @@ import yfinance as yf
 
 # import DS libraries
 import pandas as pd
+import numpy as np
 
 # import files
 from Pages import equities as eq
@@ -30,7 +31,13 @@ sp_tickers = sp_tickers['Symbol'].values.tolist()
 crypto_tickers = pd.read_csv('Static/Data/crypto_tickers.csv', names=['Symbol'])
 crypto_tickers = crypto_tickers['Symbol'].values.tolist()
 
-tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers, '/FX': [], '/fixed-income': [], '/commodities': [], '/sentiment': [], }
+fx_countries = pd.read_csv('Static/Data/Foreign_Exchange_Rates.csv')
+fx_countries = fx_countries.replace('ND', np.nan) 
+fx_countries = fx_countries.dropna()
+
+country_lst = list(fx_countries.columns[2:])
+
+tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
@@ -137,7 +144,8 @@ sidebar = html.Div(
                 dbc.NavLink("Commodities", href="/commodities", id="commodities-link"),
                 dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link"),
                 html.Br(),
-                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
+                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...',
+                            optionHeight=70),
                 html.Br(),
                 # dcc.DatePickerRange(
                 #     id='my-date-picker-range',
@@ -179,8 +187,13 @@ sidebar = html.Div(
 
 
 content = html.Div(
-	style=CONTENT_STYLE, 
-	id="page-content",
+	dcc.Loading(
+        id="page-content",
+        type="default",
+        children=html.Div(id="financials"),
+        color = 'white'
+    ),
+    style=CONTENT_STYLE,
 	)
 
 
@@ -211,7 +224,11 @@ categories = ['equities', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentim
 @app.callback(Output('selected-symbol', 'options'), [Input("url", "pathname")]
 )
 def update_dropdown(name):
-    return [{'label': i, 'value': i} for i in tickers_dict[name]]
+
+    if name == 'FX':
+        return [{'label': i, 'value': i} for i in tickers_dict[name]], 'multi=True'
+    else:
+        return [{'label': i, 'value': i} for i in tickers_dict[name]]
 
 @app.callback(
     [
@@ -262,7 +279,7 @@ def render_page_content(pathname, symbol):
     elif pathname == "/crypto":
         return crypto.make_layout(symbol)
     elif pathname == "/FX":
-        return fx.make_layout()
+        return fx.make_layout(symbol)
     elif pathname == "/fixed-income":
         return html.P("Oh cool, this is page 3!")
     elif pathname == "/commodities":
