@@ -22,7 +22,7 @@ import json
 
 # import files
 from Pages import equities as eq
-from Pages import crypto, fx, equity_visuals
+from Pages import crypto, fx, equity_visuals, code_modal
 
 # get tickers
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
@@ -95,6 +95,7 @@ SIDEBAR_HIDEN = {
 CONTENT_STYLE = {
     "transition": "margin-left .5s",
     "margin-left": "16rem",
+    "margin-bottom": "30rem",
     "margin-right": 0,
     "padding": "2rem 1rem",
     "background-color": "#15202b",
@@ -116,24 +117,24 @@ DATATABLE_STYLE = {
     'backgroundColor': '#15202b',
 }
 
-with open('Static/Markdown Code/equity_mkdn.md', 'r') as text:
-    code = text.read() 
+# with open('Static/Markdown Code/equity_mkdn.md', 'r') as text:
+#     code = text.read() 
 
 # Sticky dash board header
 navbar = dbc.NavbarSimple(
     children=[
         dbc.Button("See Code", id="open-modal", className="me-1", outline=True, color="primary", n_clicks=0),
-        dbc.Button("Sidebar", outline=True, color="secondary", className="mr-1", id="btn_sidebar"),
         dbc.Modal(
             [
                 dbc.ModalHeader(dbc.ModalTitle("Python Code")),
-                dbc.ModalBody(dcc.Markdown(code)),
+                dbc.ModalBody(dcc.Markdown(id="see-code-content")),
             ],
             id="modal-content",
             size="lg",
             is_open=False,
             centered=True
         ),
+        dbc.Button("Sidebar", outline=True, color="secondary", className="mr-1", id="btn_sidebar"),
         
     ],
     sticky="top",
@@ -217,7 +218,7 @@ app.layout = html.Div(
         navbar,
         sidebar,
         content,
-    ],
+    ]
 )
 
 # toggle see code button in dash header
@@ -287,7 +288,11 @@ def toggle_active_links(pathname):
         return True, False, False, False, False, False, False
     return [pathname == f"/{i}" for i in categories]
 
-
+# communicate with "see code" content dictionary
+@app.callback(Output("see-code-content", "children"), [Input("url", "pathname"), Input('selected-symbol', 'value')])
+def render_code(pathname, symbol):
+    return code_modal.get_modal_content(pathname, symbol)
+    
 @app.callback(Output("page-content", "children"), [Input("url", "pathname"), Input('selected-symbol', 'value')])
 def render_page_content(pathname, symbol):
     if pathname in ["/", "/equities"]:

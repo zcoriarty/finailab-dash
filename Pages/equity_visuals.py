@@ -217,15 +217,13 @@ def make_layout():
 					html.Div(id='cash_flow_statement_data', style={'padding-bottom': '2rem', 'width': '45%', 'display': 'none'}),
 					html.Div(id='financial_statement_growth_data', style={'padding-bottom': '2rem', 'width': '49%', 'display': 'none'}),
 					
-				], align='center'),
+				]),
 			]), color = '#15202b'
 			)
-	], className="left columns", style={'margin-bottom':'35rem'})
+	], style={'margin-bottom':'35rem'})
 
 
 def register_callbacks(app):
-
-	
 
 	@app.callback(
 		Output("modal-body-scroll", "is_open"),
