@@ -18,10 +18,11 @@ import yfinance as yf
 # import DS libraries
 import pandas as pd
 import numpy as np
+import json
 
 # import files
 from Pages import equities as eq
-from Pages import crypto, fx
+from Pages import crypto, fx, equity_visuals
 
 # get tickers
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
@@ -37,7 +38,16 @@ fx_countries = fx_countries.dropna()
 
 country_lst = list(fx_countries.columns[2:])
 
-tickers_dict = {'/equities': sp_tickers, '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
+# get all companies from json file
+with open("Static/Dropdown Data/companies.json", "r") as read_file:
+	company_list = json.load(read_file)
+company_options_list = []
+for company in company_list:
+	# company_options_list.append({'label': str(company_list[company] + ' (' + company + ')'),
+	# 							'value': company})
+    company_options_list.append(company)
+
+tickers_dict = {'/': company_list, '/equities': company_list, '/equity-visuals': [], '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
@@ -48,6 +58,7 @@ server = app.server
 server.wsgi_app = WhiteNoise(server.wsgi_app, root='Static/') 
 
 eq.register_callbacks(app)
+equity_visuals.register_callbacks(app)
 
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
@@ -100,6 +111,10 @@ SEARCH_STYLE  = {
     "background-color": "#15202b",
     'color': 'black',
     }
+DATATABLE_STYLE = {
+    'color': 'white',
+    'backgroundColor': '#15202b',
+}
 
 with open('Static/Markdown Code/equity_mkdn.md', 'r') as text:
     code = text.read() 
@@ -137,7 +152,10 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 html.Br(),
-                dbc.NavLink("Equities", href="/equities", id="equities-link"),
+                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Data", href="/equities", id="equities-link"),
+                                                                dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link")]
+                                , menu_variant="dark", nav=True, group=True
+                ),
                 dbc.NavLink("Crypto", href="/crypto", id="crypto-link"),
                 dbc.NavLink("FX", href="/FX", id="FX-link"),
                 dbc.NavLink("Fixed Income", href="/fixed-income", id="fixed-income-link"),
@@ -214,14 +232,17 @@ app.callback(
     State("modal-content", "is_open"),
 )(toggle_modal)
 
-categories = ['equities', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
+categories = ['equities','equity-visuals', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
 # adjust dropdown tickers for a given tab
 @app.callback(Output('selected-symbol', 'options'), [Input("url", "pathname")]
 )
 def update_dropdown(name):
 
+    
     if name == 'FX':
-        return [{'label': i, 'value': i} for i in tickers_dict[name]], 'multi=True'
+        return [{'label': i, 'value': i} for i in tickers_dict[name]]
+    if name in ['equities','equity-visuals']:
+        return [{'label': str(company_list[company] + ' (' + company + ')'), 'value': company} for company in tickers_dict[name]]
     else:
         return [{'label': i, 'value': i} for i in tickers_dict[name]]
 
@@ -263,7 +284,7 @@ def toggle_sidebar(n, nclick):
 def toggle_active_links(pathname):
     if pathname == "/":
         # Treat page 1 as the homepage / index
-        return True, False, False
+        return True, False, False, False, False, False, False
     return [pathname == f"/{i}" for i in categories]
 
 
@@ -271,6 +292,8 @@ def toggle_active_links(pathname):
 def render_page_content(pathname, symbol):
     if pathname in ["/", "/equities"]:
         return eq.make_layout(symbol)
+    elif pathname == "/equity-visuals":
+        return equity_visuals.make_layout()
     elif pathname == "/crypto":
         return crypto.make_layout(symbol)
     elif pathname == "/FX":

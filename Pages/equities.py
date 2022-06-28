@@ -91,7 +91,7 @@ def make_layout(symbol):
 				], align='center'),      
 			]), color = '#15202b' # all cell border
 		)
-	])
+	], style={'margin-bottom':'30rem'})
 
 
 
@@ -102,7 +102,7 @@ DATATABLE_STYLE = {
 
 DATATABLE_HEADER = {
 	'backgroundColor': '#162636',
-	'color': 'White',
+	'color': 'white',
 	'fontWeight': 'bold',
 }
 
@@ -219,6 +219,7 @@ def drawText():
 # 				])
 # 		)
 # 	])
+# def background_processing():
 
 def centerStock(symbol):
 
@@ -231,7 +232,7 @@ def centerStock(symbol):
 	# Retrieve stock data frame (df) from yfinance API at an interval of 1m 
 	df = yf.download(tickers=stock,period='1d',interval='1m')
 
-		# add Moving Averages (5day and 20day) to df 
+	# add Moving Averages (5day and 20day) to df 
 	df['MA5'] = df['Close'].rolling(window=5).mean()
 	df['MA20'] = df['Close'].rolling(window=20).mean()
 
@@ -398,7 +399,6 @@ def cash_flows(symbol):
 				]), color = '#192734'
 			),  
 		])
-
 
 
 def register_callbacks(app):

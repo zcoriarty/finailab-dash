@@ -26,7 +26,7 @@ import plotly.graph_objs as go
 def make_layout(symbol):
 
 	if symbol is None:
-		symbol = 'JAPAN - YEN/US$'
+		symbol = 'EURO AREA - EURO/US$'
 
 	return html.Div([
 		dbc.Card(
