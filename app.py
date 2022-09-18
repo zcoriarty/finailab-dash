@@ -168,16 +168,16 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 html.Br(),
-                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link"), 
-                                                                dbc.DropdownMenuItem("Data", href="/equities", id="equities-link"),
+                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link", className="nav-pills"), 
+                                                                dbc.DropdownMenuItem("Data", href="/equities", id="equities-link", className="nav-pills"),
                                                                 ]
                                 , menu_variant="dark", nav=True, group=True
                 ),
-                dbc.NavLink("Crypto", href="/crypto", id="crypto-link"),
-                dbc.NavLink("FX", href="/FX", id="FX-link"),
-                dbc.NavLink("Fixed Income", href="/fixed-income", id="fixed-income-link"),
-                dbc.NavLink("Commodities", href="/commodities", id="commodities-link"),
-                dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link"),
+                dbc.NavLink("Crypto", href="/crypto", id="crypto-link", className="nav-pills"),
+                dbc.NavLink("FX", href="/FX", id="FX-link", className="nav-pills"),
+                dbc.NavLink("Fixed Income", href="/fixed-income", id="fixed-income-link", className="nav-pills"),
+                dbc.NavLink("Commodities", href="/commodities", id="commodities-link", className="nav-pills"),
+                dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link", className="nav-pills"),
                 html.Br(),
                 dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
                 html.Br(),
@@ -211,7 +211,7 @@ sidebar = html.Div(
                 
             ],
             vertical=True,
-            pills=True,
+            pills=True
             
         ),
     ],

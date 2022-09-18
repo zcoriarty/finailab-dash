@@ -30,3 +30,25 @@
     border-right: 1px solid lightgrey !important;
     border-top: 3px solid #e36209 !important;
 }
+
+body {
+    background: #15202b;
+}
+.nav-pills a {
+    color: #ffffff
+}
+
+.nav-pills a:hover {
+    color: #6b6b6b;
+    border-radius: 0px;
+}
+
+.nav-pills .active a:hover {
+    color: #6b6b6b;
+    border-radius: 0px;
+}
+.nav>li>a:hover, 
+.nav>li>a:focus {
+    color: #6b6b6b;
+    border-radius: 0px;
+}
