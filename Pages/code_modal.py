@@ -103,7 +103,7 @@ def get_modal_content(pathname, symbol):
                 import yfinance as yf
 
 
-                api_key = # TODO: insert link to get key
+                api_key = [Get Key Here](https://site.financialmodelingprep.com/developer/docs/)
                 period = 'annual' # quarterly also possible
                 ```
 

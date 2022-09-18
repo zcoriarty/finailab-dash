@@ -1,6 +1,6 @@
 # import dash libraries
 import dash
-from dash import html, dcc, dash_table
+from dash import DiskcacheManager, CeleryManager, html, dcc, dash_table
 import plotly.express as px
 from jupyter_dash import JupyterDash
 import dash_bootstrap_components as dbc
@@ -8,12 +8,15 @@ import dash_mantine_components as dmc
 from dash.dependencies import Input, Output, State
 from datetime import timedelta, datetime, date
 
+import diskcache
+
 # hosting on heroku
 import gunicorn
 from whitenoise import WhiteNoise
 
 # import finance libraries
 import yfinance as yf
+yf.pdr_override()
 
 # import DS libraries
 import pandas as pd
@@ -23,6 +26,11 @@ import json
 # import files
 from Pages import equities as eq
 from Pages import crypto, fx, equity_visuals, code_modal
+
+import multiprocessing, threading
+
+
+
 
 # get tickers
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
@@ -38,6 +46,8 @@ fx_countries = fx_countries.dropna()
 
 country_lst = list(fx_countries.columns[2:])
 
+equity_df = pd.DataFrame()
+
 # get all companies from json file
 with open("Static/Dropdown Data/companies.json", "r") as read_file:
 	company_list = json.load(read_file)
@@ -50,6 +60,11 @@ for company in company_list:
 tickers_dict = {'/': company_list, '/equities': company_list, '/equity-visuals': [], '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
+
+# NEED TO BE CHANGED TO CELERY FOR PRODUCTION
+
+cache = diskcache.Cache("./cache")
+background_callback_manager = DiskcacheManager(cache)
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
@@ -153,8 +168,9 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 html.Br(),
-                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Data", href="/equities", id="equities-link"),
-                                                                dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link")]
+                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link"), 
+                                                                dbc.DropdownMenuItem("Data", href="/equities", id="equities-link"),
+                                                                ]
                                 , menu_variant="dark", nav=True, group=True
                 ),
                 dbc.NavLink("Crypto", href="/crypto", id="crypto-link"),
@@ -163,8 +179,7 @@ sidebar = html.Div(
                 dbc.NavLink("Commodities", href="/commodities", id="commodities-link"),
                 dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link"),
                 html.Br(),
-                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...',
-                            optionHeight=70),
+                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
                 html.Br(),
                 # dcc.DatePickerRange(
                 #     id='my-date-picker-range',
@@ -220,6 +235,8 @@ app.layout = html.Div(
         content,
     ]
 )
+
+
 
 # toggle see code button in dash header
 def toggle_modal(n1, is_open):
@@ -297,7 +314,7 @@ def render_code(pathname, symbol):
 def render_page_content(pathname, symbol):
     if pathname in ["/", "/equities"]:
         return eq.make_layout(symbol)
-    elif pathname == "/equity-visuals":
+    elif pathname in ["/equity-visuals"]:
         return equity_visuals.make_layout()
     elif pathname == "/crypto":
         return crypto.make_layout(symbol)
@@ -306,19 +323,41 @@ def render_page_content(pathname, symbol):
     elif pathname == "/fixed-income":
         return html.P("Oh cool, this is page 3!")
     elif pathname == "/commodities":
-        return html.P("Oh cool, this is page 3!")
+        return html.P("Oh cool, this is page 4!")
     elif pathname == "/sentiment":
-        return html.P("Oh cool, this is page 3!")
+        return html.P("Oh cool, this is page 5!")
     # If the user tries to reach a different page, return a 404 message
-    return dbc.Jumbotron(
-        [
-            html.H1("404: Not found", className="text-danger"),
-            html.Hr(),
-            html.P(f"The pathname {pathname} was not recognised..."),
-        ]
+    return html.Div(
+        dbc.Container(
+            [
+                html.H1("404: Not found", className="text-danger"),
+                html.Hr(),
+                html.P(f"The pathname {pathname} was not recognised..."),
+            ],
+            fluid=True,
+            className="py-3",
+        ),
+        className="p-3 bg-light rounded-3",
     )
 
+# # @app.callback(Output("nothing", "children"), Input("url", "pathname"), background=True, manager=background_callback_manager)
+# def get_yf_data():
+    
+#     for section in range(50, len(company_options_list), 50):
+#         # Retrieve stock data frame (df) from yfinance API at an interval of 1m 
+#         yf_pd = yf.download(tickers=company_options_list,period='1d',interval='1m', group_by='ticker', auto_adjust = False, prepost = False, threads = True, proxy = None, progress=False)
+#         # equity_df.append(df)
+#         print("yf", yf_pd)
+#         eq.yf_data = pd.concat([yf_pd, eq.yf_data])
+#     return html.P(id='placeholder')
 
+    
 
 if __name__ == "__main__":
+
     app.run_server(debug=True, port=8086)
+
+    
+    
+    
+    

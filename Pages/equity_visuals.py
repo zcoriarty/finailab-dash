@@ -1,5 +1,3 @@
-# from turtle import bgcolor
-# import FundamentalAnalysis as fa
 import FundamentalAnalysis as fa
 import dash
 import pandas as pd
@@ -277,12 +275,11 @@ def register_callbacks(app):
 	def collect_company_profiles(companies, api_key):
 		if not companies or companies is None:
 			return None
-
+		
 		company_profiles = {}
 		for company in companies:
 			company_profiles[company] = fa.profile(company, api_key).to_dict()
-
-		print(company_profiles)
+			
 		return json.dumps(company_profiles)
 
 
@@ -323,7 +320,6 @@ def register_callbacks(app):
 				
 				# stock_data[company] = fa.stock_data(company, period="10y")['adjclose'].to_dict()
 				stock_data[company] = yf.download(tickers=company, period='10y')['Close'].to_dict()
-				print(stock_data[company])
 				stock_data[company] = {k.isoformat(): v for k, v in stock_data[company].items()}
 				
 			except Exception:
@@ -638,9 +634,7 @@ def register_callbacks(app):
 		cash_flow_statement_data = {}
 		for company in companies:
 			cash_flow_statement_data[company] = fa.cash_flow_statement(company, api_key, period=period).to_dict()
-			# print("CA", cash_flow_statement_data)
 
-		# print(cash_flow_statement_data())
 		return json.dumps(cash_flow_statement_data)
 
 
