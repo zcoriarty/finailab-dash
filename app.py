@@ -30,7 +30,10 @@ from Pages import crypto, fx, equity_visuals, code_modal
 import multiprocessing, threading
 
 
-
+PRIMARY = '#FFFFFF'
+SECONDARY = '#FFFFFF'
+ACCENT = '#EF5700'
+SIDEBAR = '#F7F7F7'
 
 # get tickers
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
@@ -49,7 +52,7 @@ country_lst = list(fx_countries.columns[2:])
 equity_df = pd.DataFrame()
 
 # get all companies from json file
-with open("Static/Dropdown Data/companies.json", "r") as read_file:
+with open('Static/Dropdown Data/companies.json', 'r') as read_file:
 	company_list = json.load(read_file)
 company_options_list = []
 for company in company_list:
@@ -57,105 +60,135 @@ for company in company_list:
 	# 							'value': company})
     company_options_list.append(company)
 
-tickers_dict = {'/': company_list, '/equities': company_list, '/equity-visuals': [], '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
+tickers_dict = {'/': company_list, '/backtesting': company_list, '/equity-visuals': [], '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
 # NEED TO BE CHANGED TO CELERY FOR PRODUCTION
 
-cache = diskcache.Cache("./cache")
+cache = diskcache.Cache('./cache')
 background_callback_manager = DiskcacheManager(cache)
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
 server = app.server
 
-server.wsgi_app = WhiteNoise(server.wsgi_app, root='Static/') 
+server.wsgi_app = WhiteNoise(server.wsgi_app, root='Static/')
+server.wsgi_app = WhiteNoise(server.wsgi_app, root='assets/')
 
 eq.register_callbacks(app)
 equity_visuals.register_callbacks(app)
 
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
-    "position": "fixed",
-    "top": 54,
-    "left": 0,
-    "bottom": 0,
-    "width": "16rem",
-    "height": "100%",
-    "z-index": 1,
-    "overflow-x": "hidden",
-    "transition": "all 0.5s",
-    "padding": "0.5rem 1rem",
-    "background-color": "#15202b",
-	"color": "#FFFFFF",
+    'position': 'fixed',
+    'top': 54,
+    'left': 0,
+    'bottom': 0,
+    'width': '16rem',
+    'height': '100%',
+    'z-index': 1,
+    'overflow-x': 'hidden',
+    'transition': 'all 0.5s',
+    'padding': '0.5rem 1rem',
+    'background-color': SIDEBAR, 
+	'color': ACCENT,
 }
 
 SIDEBAR_HIDEN = {
-    "position": "fixed",
-    "top": 54,
-    "left": "-16rem",
-    "bottom": 0,
-    "width": "16rem",
-    "height": "100%",
-    "z-index": 1,
-    "overflow-x": "hidden",
-    "transition": "all 0.5s",
-    "padding": "0rem 0rem",
-    "background-color": "#15202b",
+    'position': 'fixed',
+    'top': 54,
+    'left': '-16rem',
+    'bottom': 0,
+    'width': '16rem',
+    'height': '100%',
+    'z-index': 1,
+    'overflow-x': 'hidden',
+    'transition': 'all 0.5s',
+    'padding': '0rem 0rem',
+    'background-color': SIDEBAR,
 }
 
 # the styles for the main content position it to the right of the sidebar and
 # add some padding.
 CONTENT_STYLE = {
-    "transition": "margin-left .5s",
-    "margin-left": "16rem",
-    "margin-bottom": "30rem",
-    "margin-right": 0,
-    "padding": "2rem 1rem",
-    "background-color": "#15202b",
+    'transition': 'margin-left .5s',
+    'margin-left': '16rem',
+    'margin-bottom': '30rem',
+    'margin-right': 0,
+    'padding': '2rem 1rem',
+    'background-color': PRIMARY,
 }
 
 CONTENT_STYLE1 = {
-    "transition": "margin-left .5s",
-    # "margin-left": "2rem",
-    # "margin-right": "2rem",
-    "padding": "2rem 1rem",
-    "background-color": "#15202b",
+    'transition': 'margin-left .5s',
+    # 'margin-left': '2rem',
+    # 'margin-right': '2rem',
+    'padding': '2rem 1rem',
+    'background-color': PRIMARY,
 }
 SEARCH_STYLE  = {
-    "background-color": "#15202b",
+    'background-color': PRIMARY,
     'color': 'black',
     }
 DATATABLE_STYLE = {
     'color': 'white',
-    'backgroundColor': '#15202b',
+    'backgroundColor': PRIMARY,
 }
-
-# with open('Static/Markdown Code/equity_mkdn.md', 'r') as text:
-#     code = text.read() 
 
 # Sticky dash board header
 navbar = dbc.NavbarSimple(
     children=[
-        dbc.Button("See Code", id="open-modal", className="me-1", outline=True, color="primary", n_clicks=0),
+        dbc.DropdownMenu(
+            [
+                dbc.DropdownMenuItem(
+                    "Top Stats", id="headline_stats_df", n_clicks=0
+                ),
+                dbc.DropdownMenuItem(
+                    "Equity Timeseries", id="center_stock", n_clicks=0
+                ),
+                dbc.DropdownMenuItem(
+                    "Cumulative Returns", id="cumulative_returns_plot", n_clicks=0
+                ),
+                dbc.DropdownMenuItem(
+                    "Annual/monthly Returns", id="annual_monthly_returns_plot", n_clicks=0
+                ),
+                dbc.DropdownMenuItem(
+                    "Rolling Sharpe", id="rolling_sharpe_plot", n_clicks=0
+                ),
+                dbc.DropdownMenuItem(
+                    "Drawdown Underwater", id="drawdown_underwater_plot", n_clicks=0
+                ),
+                
+            ],
+            label="Download Data", toggle_style={"color": "white", "backgroundColor": ACCENT, "border":"0"}, style = {"margin-right": "5px"}
+        ),
+        dcc.Download(id="download-headline-stats-csv"),
+        dcc.Download(id="download-center-stock-csv"),
+        dcc.Download(id="download-cumulative-returns-csv"),
+        dcc.Download(id="download-anual-monthly-returns-csv"),
+        dcc.Download(id="download-rolling-sharpe-csv"),
+        dcc.Download(id="download-drawdown-underwater-csv"),
+        # html.Br(),
+        dbc.Button('See Code', id='open-modal', className='me-1', outline=True, n_clicks=0, style = {'color': SIDEBAR, 'background-color': ACCENT, "margin-right": "5px", "border":"0"}),  
         dbc.Modal(
             [
-                dbc.ModalHeader(dbc.ModalTitle("Python Code")),
-                dbc.ModalBody(dcc.Markdown(id="see-code-content")),
+                dbc.ModalHeader(dbc.ModalTitle('Python Code')),
+                dbc.ModalBody(dcc.Markdown(id='see-code-content')),
             ],
-            id="modal-content",
-            size="lg",
+            id='modal-content',
+            size='lg',
             is_open=False,
             centered=True
         ),
-        dbc.Button("Sidebar", outline=True, color="secondary", className="mr-1", id="btn_sidebar"),
+        dbc.Button('Sidebar', outline=True, className='mr-1', id='btn_sidebar', style = {'color': ACCENT, 'background-color': SIDEBAR, "border-color":ACCENT}),
         
     ],
-    sticky="top",
-    brand="FinAILab Dash",
-    brand_href="#",
-    color="#15202b",
+    sticky='top',
+    brand='Quanturf- backtesting',
+    id='navbar',
+    brand_href='#',
+    color=SIDEBAR,
     dark=True,
     fluid=True,
 )
@@ -168,18 +201,20 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 html.Br(),
-                dbc.DropdownMenu(label="Equities", children = [dbc.DropdownMenuItem("Visualizations", href="/equity-visuals", id="equity-visuals-link", className="nav-pills"), 
-                                                                dbc.DropdownMenuItem("Data", href="/equities", id="equities-link", className="nav-pills"),
-                                                                ]
-                                , menu_variant="dark", nav=True, group=True
-                ),
-                dbc.NavLink("Crypto", href="/crypto", id="crypto-link", className="nav-pills"),
-                dbc.NavLink("FX", href="/FX", id="FX-link", className="nav-pills"),
-                dbc.NavLink("Fixed Income", href="/fixed-income", id="fixed-income-link", className="nav-pills"),
-                dbc.NavLink("Commodities", href="/commodities", id="commodities-link", className="nav-pills"),
-                dbc.NavLink("Sentiment", href="/sentiment", id="sentiment-link", className="nav-pills"),
+                # dbc.DropdownMenu(label='Equities', children = [dbc.DropdownMenuItem('Visualizations', href='/equity-visuals', id='equity-visuals-link', className='nav-pills'), 
+                #                                                 dbc.DropdownMenuItem('Data', href='/backtesting', id='backtesting-link', className='nav-pills'),
+                #                                                 ]
+                #                 , menu_variant='dark', nav=True, group=True
+                # ),
+                dbc.NavLink('Backtesting', href='/backtesting', id='backtesting-link', className='nav-pills'),
+                dbc.NavLink('Visualizations', href='/equity-visuals', id='equity-visuals-link', className='nav-pills'),
+                dbc.NavLink('Crypto', href='/crypto', id='crypto-link', className='nav-pills'),
+                dbc.NavLink('FX', href='/FX', id='FX-link', className='nav-pills'),
+                dbc.NavLink('Fixed Income', href='/fixed-income', id='fixed-income-link', className='nav-pills'),
+                dbc.NavLink('Commodities', href='/commodities', id='commodities-link', className='nav-pills'),
+                dbc.NavLink('Sentiment', href='/sentiment', id='sentiment-link', className='nav-pills'),
                 html.Br(),
-                dcc.Dropdown(id="selected-symbol", style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
+                dcc.Dropdown(id='selected-symbol', style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
                 html.Br(),
                 # dcc.DatePickerRange(
                 #     id='my-date-picker-range',
@@ -190,8 +225,8 @@ sidebar = html.Div(
                 # ),
                 # dmc.DatePicker(
                 #     id='start-date',
-                #     label="Start Date",
-                #     inputFormat="DD-MM-YYYY",
+                #     label='Start Date',
+                #     inputFormat='DD-MM-YYYY',
                 #     minDate=datetime(1995, 8, 5),
                 #     maxDate=datetime.now()- timedelta(1),
                 #     value=datetime.now() - timedelta(1),
@@ -200,8 +235,8 @@ sidebar = html.Div(
                 # ),
                 # dmc.DatePicker(
                 #     id='end-date',
-                #     label="End Date",
-                #     inputFormat="DD-MM-YYYY",
+                #     label='End Date',
+                #     inputFormat='DD-MM-YYYY',
                 #     minDate=datetime(1995, 8, 5),
                 #     maxDate=datetime.now(),
                 #     value=datetime.now(),
@@ -215,26 +250,41 @@ sidebar = html.Div(
             
         ),
     ],
-    id="sidebar",
+    id='sidebar',
     style=SIDEBAR_STYLE,
 )
 
 
 content = html.Div(
 	style=CONTENT_STYLE, 
-	id="page-content",
+	id='page-content',
 	)
 
 
-app.layout = html.Div(
-    [
-        dcc.Store(id='side_click'),
-        dcc.Location(id="url"),
-        navbar,
-        sidebar,
-        content,
-    ]
-)
+app.layout = html.Div([
+    dcc.Store(id='side_click'),
+    dcc.Location(id='url'),
+    navbar,
+    sidebar,
+    dcc.Loading(
+        children=[
+            html.Div(
+            [
+                content,
+                
+            ], style={'height': '100vh', 'width': '100vw'}
+        )],
+        type='cube', color = ACCENT
+    )], style={'background-color': PRIMARY})
+# app.layout = html.Div(
+#     [
+#         dcc.Store(id='side_click'),
+#         dcc.Location(id='url'),
+#         navbar,
+#         sidebar,
+#         content,
+#     ]
+# )
 
 
 
@@ -245,47 +295,47 @@ def toggle_modal(n1, is_open):
     return is_open
 
 app.callback(
-    Output("modal-content", "is_open"),
-    Input("open-modal", "n_clicks"),
-    State("modal-content", "is_open"),
+    Output('modal-content', 'is_open'),
+    Input('open-modal', 'n_clicks'),
+    State('modal-content', 'is_open'),
 )(toggle_modal)
 
-categories = ['equities','equity-visuals', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
+categories = ['backtesting','equity-visuals', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
 # adjust dropdown tickers for a given tab
-@app.callback(Output('selected-symbol', 'options'), [Input("url", "pathname")]
+@app.callback(Output('selected-symbol', 'options'), [Input('url', 'pathname')]
 )
 def update_dropdown(name):
 
     
     if name == 'FX':
         return [{'label': i, 'value': i} for i in tickers_dict[name]]
-    if name in ['equities','equity-visuals']:
+    if name in ['backtesting','equity-visuals']:
         return [{'label': str(company_list[company] + ' (' + company + ')'), 'value': company} for company in tickers_dict[name]]
     else:
         return [{'label': i, 'value': i} for i in tickers_dict[name]]
 
 @app.callback(
     [
-        Output("sidebar", "style"),
-        Output("page-content", "style"),
-        Output("side_click", "data"),
+        Output('sidebar', 'style'),
+        Output('page-content', 'style'),
+        Output('side_click', 'data'),
     ],
 
-    [Input("btn_sidebar", "n_clicks")],
+    [Input('btn_sidebar', 'n_clicks')],
     [
-        State("side_click", "data"),
+        State('side_click', 'data'),
     ]
 )
 def toggle_sidebar(n, nclick):
     if n:
-        if nclick == "SHOW":
+        if nclick == 'SHOW':
             sidebar_style = SIDEBAR_HIDEN
             content_style = CONTENT_STYLE1
-            cur_nclick = "HIDDEN"
+            cur_nclick = 'HIDDEN'
         else:
             sidebar_style = SIDEBAR_STYLE
             content_style = CONTENT_STYLE
-            cur_nclick = "SHOW"
+            cur_nclick = 'SHOW'
     else:
         sidebar_style = SIDEBAR_STYLE
         content_style = CONTENT_STYLE
@@ -296,64 +346,64 @@ def toggle_sidebar(n, nclick):
 # this callback uses the current pathname to set the active state of the
 # corresponding nav link to true, allowing users to tell see page they are on
 @app.callback(
-    [Output(f"{i}-link", "active") for i in categories],
-    [Input("url", "pathname")],
+    [Output(f'{i}-link', 'active') for i in categories],
+    [Input('url', 'pathname')],
 )
 def toggle_active_links(pathname):
-    if pathname == "/":
+    if pathname == '/':
         # Treat page 1 as the homepage / index
         return True, False, False, False, False, False, False
-    return [pathname == f"/{i}" for i in categories]
+    return [pathname == f'/{i}' for i in categories]
 
-# communicate with "see code" content dictionary
-@app.callback(Output("see-code-content", "children"), [Input("url", "pathname"), Input('selected-symbol', 'value')])
+# communicate with 'see code' content dictionary
+@app.callback(Output('see-code-content', 'children'), [Input('url', 'pathname'), Input('selected-symbol', 'value')])
 def render_code(pathname, symbol):
     return code_modal.get_modal_content(pathname, symbol)
     
-@app.callback(Output("page-content", "children"), [Input("url", "pathname"), Input('selected-symbol', 'value')])
+@app.callback(Output('page-content', 'children'), [Input('url', 'pathname'), Input('selected-symbol', 'value')])
 def render_page_content(pathname, symbol):
-    if pathname in ["/", "/equities"]:
+    if pathname in ['/', '/backtesting']:
         return eq.make_layout(symbol)
-    elif pathname in ["/equity-visuals"]:
+    elif pathname in ['/equity-visuals']:
         return equity_visuals.make_layout()
-    elif pathname == "/crypto":
+    elif pathname == '/crypto':
         return crypto.make_layout(symbol)
-    elif pathname == "/FX":
+    elif pathname == '/FX':
         return fx.make_layout(symbol)
-    elif pathname == "/fixed-income":
-        return html.P("Oh cool, this is page 3!")
-    elif pathname == "/commodities":
-        return html.P("Oh cool, this is page 4!")
-    elif pathname == "/sentiment":
-        return html.P("Oh cool, this is page 5!")
+    elif pathname == '/fixed-income':
+        return html.P('Oh cool, this is page 3!')
+    elif pathname == '/commodities':
+        return html.P('Oh cool, this is page 4!')
+    elif pathname == '/sentiment':
+        return html.P('Oh cool, this is page 5!')
     # If the user tries to reach a different page, return a 404 message
     return html.Div(
         dbc.Container(
             [
-                html.H1("404: Not found", className="text-danger"),
+                html.H1('404: Not found', className='text-danger'),
                 html.Hr(),
-                html.P(f"The pathname {pathname} was not recognised..."),
+                html.P(f'The pathname {pathname} was not recognised...'),
             ],
             fluid=True,
-            className="py-3",
+            className='py-3',
         ),
-        className="p-3 bg-light rounded-3",
+        className='p-3 bg-light rounded-3',
     )
 
-# # @app.callback(Output("nothing", "children"), Input("url", "pathname"), background=True, manager=background_callback_manager)
+# # @app.callback(Output('nothing', 'children'), Input('url', 'pathname'), background=True, manager=background_callback_manager)
 # def get_yf_data():
     
 #     for section in range(50, len(company_options_list), 50):
 #         # Retrieve stock data frame (df) from yfinance API at an interval of 1m 
 #         yf_pd = yf.download(tickers=company_options_list,period='1d',interval='1m', group_by='ticker', auto_adjust = False, prepost = False, threads = True, proxy = None, progress=False)
 #         # equity_df.append(df)
-#         print("yf", yf_pd)
+#         print('yf', yf_pd)
 #         eq.yf_data = pd.concat([yf_pd, eq.yf_data])
 #     return html.P(id='placeholder')
 
     
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     app.run_server(debug=True, port=8086)
 

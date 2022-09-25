@@ -1,4 +1,8 @@
 import warnings
+warnings.filterwarnings('ignore')
+import os
+import tempfile
+import zipfile
 
 # Customized Bullet chart
 import datetime as dt
@@ -16,6 +20,8 @@ import pyfolio as pf
 import matplotlib.pyplot as plt
 plt.switch_backend('Agg')
 import empyrical
+import quantstats as qs
+from quantstats import stats
 from pandas_datareader import data as web
 from plotly.subplots import make_subplots
 
@@ -34,40 +40,54 @@ import plotly.graph_objs as go
 
 # global yf_data
 # yf_data = pd.DataFrame()
+df_dict = {}
 
 def make_layout(symbol):
 
 	if symbol is None:
 		symbol = 'AAPL'
 		# app.equity_df.append(yf.download(tickers='AAPL',period='1d',interval='1m', group_by='ticker', auto_adjust = False, prepost = False, threads = True, proxy = None))
-
-	sharpe_ratio, max_drawdown, cumulative_returns_plot, annual_monthly_returns_plot, rolling_sharpe_plot, drawdown_periods_plot, drawdown_underwater_plot = key_metrics(symbol)
-
+	full_report, top_stats, cumulative_returns_plot, annual_monthly_returns_plot, rolling_sharpe_plot, drawdown_periods_plot, drawdown_underwater_plot = key_metrics(symbol)
+	kurtosis, profit_ratio, expected_return, exposure, tail_ratio, value_at_risk, payoff_ratio, skew, win_rate, outlier_loss_ratio = top_stats
+	headline_stats_df = pd.DataFrame.from_dict({'kurtosis': [kurtosis], 'profit_ratio': [profit_ratio], 'expected_return': [expected_return], 
+			'exposure':[exposure], 'tail_ratio':[tail_ratio], 'value_at_risk':[value_at_risk], 'payoff_ratio':[payoff_ratio],
+			 'skew':[skew], 'win_rate':[win_rate], 'outlier_loss_ratio':[outlier_loss_ratio]})
+	df_dict['Top Stats'] = headline_stats_df
 
 	return html.Div([
 		dbc.Card(
 			dbc.CardBody([
-				# dbc.Row([
-				# 	dbc.Col([
-				# 		drawText("Sharpe Ratio", sharpe_ratio)
-				# 	], width=4),
-				# 	dbc.Col([
-				# 		drawText("Max Drawdown", max_drawdown)
-				# 	], width=4),
-				# 	# dbc.Col([
-				# 	# 	drawText()
-				# 	# ], width=4),
-				# # 	dbc.Col([
-				# # 		drawText()
-				# # 	], width=2),
-				# # 	dbc.Col([
-				# # 		drawText()
-				# # 	], width=2),
-				# # 	dbc.Col([
-				# # 		drawText()
-				# # 	], width=2),
+				dbc.Row([
+					dbc.Col([
+						drawText('Kurtosis', kurtosis)
+					]),
+					dbc.Col([
+						drawText('Profit Ratio', profit_ratio)
+					]),
+
+					dbc.Col([
+						drawText('Exposure', exposure)
+					]),
+					dbc.Col([
+						drawText('Tail Ratio', tail_ratio)
+					]),
+					dbc.Col([
+						drawText('Value at Risk', value_at_risk)
+					]),
+					dbc.Col([
+						drawText('Payoff Ratio', payoff_ratio)
+					]),
+					dbc.Col([
+						drawText('Skew', skew)
+					]),
+					dbc.Col([
+						drawText('Win Rate', win_rate)
+					]),
+					# dbc.Col([
+					# 	drawText('Outlier loss Ratio', outlier_loss_ratio)
+					# ]),
 					
-				# ]), 
+				]), 
 				html.Br(),
 				dbc.Row([
 					# dbc.Col([
@@ -78,23 +98,21 @@ def make_layout(symbol):
 						centerStock(symbol)
 					], width=9),
 					dbc.Col([
-						drawText("Sharpe Ratio", sharpe_ratio),
-						html.Br(),
-						drawText("Max Drawdown", max_drawdown)
+						full_report
 					], width=3),
 				], align='center'), 
 				html.Br(),
 				dbc.Tabs(
 					[
-						dbc.Tab(cumulative_returns_plot, label="Cumulative Returns"),
-						dbc.Tab(annual_monthly_returns_plot, label="Annual and Monthly Returns"),
-						dbc.Tab(rolling_sharpe_plot, label="Rolling Sharpe"),
-						dbc.Tab(drawdown_periods_plot, label="unfinished"),
-						dbc.Tab(drawdown_underwater_plot, label="Drawdown Underwater"),
-						# dbc.Tab(quantiles_plot, label="Scatter"),
+						dbc.Tab(cumulative_returns_plot, label='Cumulative Returns', className='nav-pills'),
+						dbc.Tab(annual_monthly_returns_plot, label='Annual and Monthly Returns', className='nav-pills'),
+						dbc.Tab(rolling_sharpe_plot, label='Rolling Sharpe', className='nav-pills'),
+						dbc.Tab(drawdown_periods_plot, label='unfinished', className='nav-pills'),
+						dbc.Tab(drawdown_underwater_plot, label='Drawdown Underwater', className='nav-pills'),
+						# dbc.Tab(quantiles_plot, label='Scatter'),
 					],
-					id="tabs",
-					# active_tab="tab-1",
+					id='tabs',
+					# active_tab='tab-1',
 				),
 				# dbc.Row([
 				# 	dbc.Col([
@@ -111,9 +129,9 @@ def make_layout(symbol):
 				# 	dbc.Col([
 				# 		html.Br(),
 				# 		dcc.Loading(
-				# 			id="loading-1",
-				# 			type="default",
-				# 			children=html.Div(id="financials"),
+				# 			id='loading-1',
+				# 			type='default',
+				# 			children=html.Div(id='financials'),
 				# 			color = 'white'
 				# 		),
 				# 	], width=9),
@@ -121,19 +139,33 @@ def make_layout(symbol):
 				# 		growth_estimates(symbol)
 				# 	], width=3),
 				# ], align='center'),      
-			]), color = '#15202b' # all cell border
+			]), color = PRIMARY, style ={'border-radius': 10} # all cell border
 		)
 	], style={'margin-bottom':'30rem'})
 
 
 
+
+
+PRIMARY = '#FFFFFF' 
+SECONDARY = '#FFFFFF'
+ACCENT = '#EF5700'
+DARK_ACCENT = '#474747'
+SIDEBAR = '#F7F7F7'
+
+# PRIMARY = '#15202b'
+# SECONDARY = '#192734'
+# ACCENT = '#FFFFFF'
+# SIDEBAR = '#F4511E'
+#F4511E
+
 DATATABLE_STYLE = {
     'color': 'white',
-    'backgroundColor': '#15202b',
+    'backgroundColor': PRIMARY,
 }
 
 DATATABLE_HEADER = {
-	'backgroundColor': '#162636',
+	'backgroundColor': SIDEBAR,
 	'color': 'white',
 	'fontWeight': 'bold',
 }
@@ -144,116 +176,51 @@ TABS_STYLES = {
 TAB_STYLE = {
     'padding': '15px',
     'fontWeight': 'bold',
-	'color': 'white',
-	'backgroundColor': '#192734',
+	'color': DARK_ACCENT,
+	'backgroundColor': SECONDARY,
 	'borderRadius': '10px',
-	"margin-left": "6px",
+	'margin-left': '6px',
 }
 
 TAB_SELECTED_STYLE = {
     'borderTop': '1px solid #d6d6d6',
     'borderBottom': '1px solid #d6d6d6',
-    'backgroundColor': 'white',
-    'color': '#15202b',
+    'backgroundColor': ACCENT,
+    'color': PRIMARY,
     'padding': '15px',
 	'borderRadius': '10px',
-	"margin-left": "6px",
+	'margin-left': '6px',
 }
+
+# helper function for closing temporary files
+def close_tmp_file(tf):
+    try:
+        os.unlink(tf.name)
+        tf.close()
+    except:
+        pass
+
+# # add csv to download folder
+# def add_csv_to_folder(df, name):
+# 	filepath = Path('/finailab_dash/Static/download_folder/' + name + '.csv')
+# 	filepath.parent.mkdir(parents=True, exist_ok=True)
+# 	df.to_csv(filepath)
 
 # Text field
 def drawText(title, text):
 	return html.Div([
-		dbc.Card(
+		dbc.Card([
+			dbc.CardHeader(title, style={'color': DARK_ACCENT}), 
 			dbc.CardBody([
 				html.Div([
-					dbc.CardHeader(title),
-					html.Br(),
-					html.H3(text),
-				], style={'textAlign': 'center', 'color': 'white'})
-			]), color = '#192734', style={"height": 225},
-		),
+					# html.Header(title, style={'color': 'white', 'fontSize': 15, 'text-decoration': 'underline', 'textAlign': 'left'}),
+					# html.Br(),
+					html.Div(str(round(text, 2)), style={'color': DARK_ACCENT, 'textAlign': 'center'}),
+					# str(round(text, 2))
+				], style={'color': DARK_ACCENT}) 
+			])
+		], color=PRIMARY, style={'height': 100, 'border-radius': 10}), # , 'backgroundColor':'#FFFFFF', 'border':'1px solid'
 	])
-
-# def topBar():
-# 	# Data
-# 	end = dt.datetime.now()
-# 	start = end - dt.timedelta(hours = 12)
-
-# 	stocks = web.DataReader(['^GSPC', '^DJI', '^IXIC'], 'yahoo', start, end)
-# 	stocks_close = pd.DataFrame(web.DataReader(['^GSPC', '^DJI', '^IXIC'], 'yahoo', start, end)['Close'])
-
-
-# 	c_bullet = go.Figure()
-
-# 	c_bullet.add_trace(go.Indicator(
-# 		mode = "number+gauge+delta", 
-# 		value = int(stocks_close['^GSPC'].tail(1)),
-# 		delta = {'reference': int(stocks_close['^GSPC'].tail(2)[0])},
-# 		domain = {'x': [0.25, 1], 
-# 				'y': [0.08, 0.25]},
-# 		# title = {'text':"<b>S&P DAY<br>RANGE</b><br><span style='color: gray; font-size:0.8em'>U.S. $</span>", 
-# 		# 		'font': {"size": 5}},    
-# 		gauge = {
-# 			'shape': "bullet",
-# 			'axis': {'range': [None, 550]},
-# 			'threshold': {
-# 				'line': {'color': "Red", 'width': 2},
-# 				'thickness': 0.75,
-# 				'value': 505},
-# 			'steps': [
-# 				{'range': [0, 350], 'color': "gray"},
-# 				{'range': [350, 550], 'color': "lightgray"}],
-# 			'bar': {'color': 'black'}}))
-
-# 	# c_bullet.add_trace(go.Indicator(
-# 	# 	mode = "number+gauge+delta", 
-# 	# 	value = int(stocks_close['^DJI'].tail(1)),
-# 	# 	delta = {'reference': int(stocks_close['^DJI'].tail(2)[0])},
-# 	# 	domain = {'x': [0.25, 1], 
-# 	# 			'y': [0.4, 0.6]},
-# 	# 	title = {'text':"<b>DJI DAY<br>RANGE</b><br><span style='color: gray; font-size:0.8em'>U.S. $</span>", 
-# 	# 			'font': {"size": 14}},
-# 	# 	gauge = {
-# 	# 		'shape': "bullet",
-# 	# 		'axis': {'range': [None, 1800]},
-# 	# 		'threshold': {
-# 	# 			'line': {'color': "red", 'width': 2},
-# 	# 			'thickness': 0.75,
-# 	# 			'value': 1681},
-# 	# 		'steps': [
-# 	# 			{'range': [0, 1300], 'color': "gray"},
-# 	# 			{'range': [1300, 1800], 'color': "lightgray"}],
-# 	# 		'bar': {'color': 'black'}}))
-
-# 	# c_bullet.add_trace(go.Indicator(
-# 	# 	mode = "number+gauge+delta", 
-# 	# 	value = int(stocks_close['^IXIC'].tail(1)),
-# 	# 	delta = {'reference': int(stocks_close['^IXIC'].tail(2)[0])},
-# 	# 	domain = {'x': [0.25, 1], 
-# 	# 			'y': [0.7, 0.9]},
-# 	# 	title = {'text':"<b>NASDAQ DAY<br>RANGE</b><br><span style='color: gray; font-size:0.8em'>U.S. $</span>", 
-# 	# 			'font': {"size": 14}},
-# 	# 	gauge = {
-# 	# 		'shape': "bullet",
-# 	# 		'axis': {'range': [None, 250]},
-# 	# 		'threshold': {
-# 	# 			'line': {'color': "red", 'width': 2},
-# 	# 			'thickness': 0.75,
-# 	# 			'value': 208},
-# 	# 		'steps': [
-# 	# 			{'range': [0, 150], 'color': "gray"},
-# 	# 			{'range': [150, 250], 'color': "lightgray"}],
-# 	# 		'bar': {'color': "black"}}))
-
-# 	c_bullet.update_layout(height = 18, margin = {'t':0, 'b':0, 'l':0})
-# 	return html.Div([
-# 		dbc.Card(
-# 			dbc.CardBody([
-# 				dcc.Graph(figure=c_bullet)
-# 				])
-# 		)
-# 	])
-# def background_processing():
 
 def beautify_plotly(fig):
 	return html.Div([
@@ -265,10 +232,12 @@ def beautify_plotly(fig):
 						'displayModeBar': False
 					}
 					)
-				]), color = '#192734'
+				]), color = SECONDARY, style ={'border-radius': 10}
 			),  
 		])
 
+
+# create main equity plot
 def centerStock(symbol):
 
 	from plotly.subplots import make_subplots
@@ -276,8 +245,11 @@ def centerStock(symbol):
 	# Override Yahoo Finance 
 	yf.pdr_override()
 
+
 	# Retrieve stock data frame (df) from yfinance API at an interval of 1m 
 	df = yf.download(tickers=symbol,period='1d',interval='1m')
+	# add_csv_to_folder(df, "center_stock")
+	df_dict['Equity Timeseries'] = df
 	# print(yf_data)
 	# df = pd.DataFrame(yf_data[symbol])
 
@@ -291,11 +263,11 @@ def centerStock(symbol):
 	fig=go.Figure()
 
 	# Creating figure with second y-axis
-	fig = make_subplots(specs=[[{"secondary_y": True}]])
+	fig = make_subplots(specs=[[{'secondary_y': True}]])
 
 	# Adding line plot with close prices and bar plot with trading volume
 	fig.add_trace(go.Scatter(x=df.index, y=df['Close'], name=symbol+' Close'), secondary_y=False)
-	fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume', opacity=0.5, marker_color=['black'], marker_colorscale="Rainbow",), secondary_y=True)
+	fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume', opacity=0.5, marker_color=['black'], marker_colorscale='Rainbow',), secondary_y=True)
 
 	fig.add_trace(go.Candlestick(x=df.index,
 					open=df['Open'],
@@ -320,12 +292,12 @@ def centerStock(symbol):
 		# rangeslider_visible=True,
 		rangeselector=dict(
 			buttons=list([
-				dict(count=15, label="15m", step="minute", stepmode="backward"),
-				dict(count=45, label="45m", step="minute", stepmode="backward"),
-				dict(count=1, label="HTD", step="hour", stepmode="todate"),
-				dict(count=3, label="3h", step="hour", stepmode="backward"),
-				dict(step="all")
-			]), bgcolor = '#192734'
+				dict(count=15, label='15m', step='minute', stepmode='backward'),
+				dict(count=45, label='45m', step='minute', stepmode='backward'),
+				dict(count=1, label='HTD', step='hour', stepmode='todate'),
+				dict(count=3, label='3h', step='hour', stepmode='backward'),
+				dict(step='all')
+			]), bgcolor = SECONDARY
 		)
 	)
 	
@@ -339,9 +311,10 @@ def centerStock(symbol):
 	fig.update_layout(
 		title= str(symbol)+' Live Share Price:',
 		yaxis_title='Stock Price (USD per Shares)',
-		template='plotly_dark',
-		plot_bgcolor= '#192734',
-		paper_bgcolor= '#192734',   
+		# template='plotly_dark',
+		plot_bgcolor= SECONDARY,
+		paper_bgcolor= SECONDARY,   
+		font=dict(color=DARK_ACCENT),
 	)
 
 
@@ -355,14 +328,14 @@ def centerStock(symbol):
 						'displayModeBar': False
 					}
 					)
-				]), color = '#192734'
+				]), color = SECONDARY, style ={'border-radius': 10}
 			),  
 		])
-
+key_metrics_df = pd.DataFrame()
 def key_metrics(symbol):
 	
 	def get_max_drawdown_underwater_f(underwater):
-		"""
+		'''
 		Determines peak, valley, and recovery dates given an 'underwater'
 		DataFrame.
 
@@ -382,7 +355,7 @@ def key_metrics(symbol):
 			The maximum drawdown's valley.
 		recovery : datetime
 			The maximum drawdown's recovery.
-		"""
+		'''
 
 		#valley = np.argmin(underwater)  # end of the period
 		valley = underwater.index[np.argmin(underwater)] # end of the period
@@ -397,7 +370,7 @@ def key_metrics(symbol):
 		return peak, valley, recovery
 
 	def get_symbol_returns_from_yahoo_f(symbol, start=None, end=None):
-		"""
+		'''
 		Wrapper for pandas.io.data.get_data_yahoo().
 		Retrieves prices for symbol from yahoo and computes returns
 		based on adjusted closing prices.
@@ -415,7 +388,7 @@ def key_metrics(symbol):
 		-------
 		pandas.DataFrame
 			Returns of symbol in requested period.
-		"""
+		'''
 
 		try:
 			px = web.get_data_yahoo(symbol, start=start, end=end)
@@ -427,7 +400,7 @@ def key_metrics(symbol):
 			
 			#px.index.rename('date',inplace=True)
 			rets = px[['Adj Close']].pct_change().dropna()
-			rets.rename(columns={"Adj Close": "adjclose"},inplace=True)
+			rets.rename(columns={'Adj Close': 'adjclose'},inplace=True)
 		except Exception as e:
 			warnings.warn(
 				'Yahoo Finance read failed: {}, falling back to Google'.format(e),
@@ -435,7 +408,7 @@ def key_metrics(symbol):
 			px = web.get_data_google(symbol, start=start, end=end)
 			rets = px[['Close']].pct_change().dropna()
 
-		rets.index = rets.index.tz_localize("UTC")
+		# rets.index = rets.index.tz_localize('UTC')
 		rets.columns = [symbol]
 		return rets
 
@@ -447,8 +420,41 @@ def key_metrics(symbol):
 
 	stock_rets = pf.utils.get_symbol_rets(symbol)
 
-	sharpe_ratio = empyrical.sharpe_ratio(stock_rets)
-	max_drawdown = empyrical.max_drawdown(stock_rets)
+	# sharpe_ratio = empyrical.sharpe_ratio(stock_rets)
+	# max_drawdown = empyrical.max_drawdown(stock_rets)
+
+	def full_report():
+		qs.extend_pandas()
+		df = pd.DataFrame(stock_rets) 
+		df.reset_index(inplace=True)
+		# df['date'] = df['date'].apply(pd.to_datetime)
+		# report = qs.reports.metrics(stock_rets, mode='full')
+		qs.reports.html(stock_rets, output='./assets/full-report.html')
+		return html.Div([
+			dbc.Card(
+				dbc.CardBody(
+					# html.Iframe(
+					# 	src="~/finailab-dash/quantstats-tearsheet.html",
+					# 	# style={"height": "1067px", "width": "100%"},
+					# )
+					"Coming Soon"
+				), color = SECONDARY, style ={'border-radius': 10}
+			),  
+		])
+
+	def top_stats():
+		return [
+			stats.kurtosis(stock_rets),
+			stats.profit_ratio(stock_rets),
+			stats.expected_return(stock_rets),
+			stats.exposure(stock_rets),
+			stats.tail_ratio(stock_rets),
+			stats.value_at_risk(stock_rets),
+			stats.payoff_ratio(stock_rets),
+			stats.skew(stock_rets),
+			stats.win_rate(stock_rets),
+			stats.outlier_loss_ratio(stock_rets)
+		]
 
 	def cumulative_returns_plot():
 		
@@ -458,15 +464,18 @@ def key_metrics(symbol):
 		
 		# create plotly fig
 		df = pd.DataFrame(xy_data).T
+		# add_csv_to_folder(df, "cumulative_returns_plot")
+		df_dict['Cumulative Returns'] = df
 		fig = px.line(df, x=0, y=1)
 
 		fig.update_layout(
 			title= 'Rolling Sharpe Ratio',
 			yaxis_title='Returns',
 			xaxis_title='Date',
-			template='plotly_dark',
-			plot_bgcolor= '#192734',
-			paper_bgcolor= '#192734',
+			# template='plotly_dark',
+			plot_bgcolor= SECONDARY,
+			paper_bgcolor= SECONDARY,
+			font=dict(color=DARK_ACCENT)
 		)
 
 		return beautify_plotly(fig)
@@ -478,10 +487,12 @@ def key_metrics(symbol):
 		df['month'] = pd.DatetimeIndex(df.index).month
 		df['year'] = pd.DatetimeIndex(df.index).year
 		df[symbol] = df[symbol] * 100
+		# add_csv_to_folder(df, "annual_monthly_returns_plot")
+		df_dict['Annual/monthly Returns'] = df
 
 		fig1 = px.histogram(df, x=symbol)
 
-		fig2 = px.bar(df, x=symbol, y="year", orientation='h')
+		fig2 = px.bar(df, x=symbol, y='year', orientation='h')
 
 		fig3 = go.Figure(data=go.Heatmap(
 				z=df[symbol],
@@ -501,9 +512,10 @@ def key_metrics(symbol):
 			fig.add_trace((go.Heatmap(z=df[symbol], x=df['month'], y=df['year'], colorscale='YlGn')), row=1, col=3)
 
 		fig.update_layout(
-			template='plotly_dark',
-			plot_bgcolor= '#192734',
-			paper_bgcolor= '#192734',
+			# template='plotly_dark',
+			font=dict(color=DARK_ACCENT),
+			plot_bgcolor= SECONDARY,
+			paper_bgcolor= SECONDARY,
 		)
 
 		return beautify_plotly(fig)
@@ -518,15 +530,18 @@ def key_metrics(symbol):
 				
 		# create plotly fig
 		df = pd.DataFrame(xy_data).T
+		# add_csv_to_folder(df, "rolling_sharpe_plot")
+		df_dict['Rolling Sharpe'] = df
 		fig = px.line(df, x=0, y=1)
 
 		fig.update_layout(
 			title= 'Rolling Sharpe Ratio',
 			yaxis_title='Sharpe Ratio',
 			xaxis_title='Year',
-			template='plotly_dark',
-			plot_bgcolor= '#192734',
-			paper_bgcolor= '#192734',
+			# template='plotly_dark',
+			font=dict(color=DARK_ACCENT),
+			plot_bgcolor= SECONDARY,
+			paper_bgcolor= SECONDARY,
 		)
 
 		return beautify_plotly(fig)
@@ -538,15 +553,18 @@ def key_metrics(symbol):
 				
 		# create plotly fig
 		df = pd.DataFrame(xy_data).T
+		# add_csv_to_folder(df, "drawdown_periods_plot")
+		df_dict['drawdown_periods_plot'] = df
 		fig = px.line(df, x=0, y=1)
 
 		fig.update_layout(
 			title= 'Top 10 Drawdown Periods',
 			yaxis_title='Cumulative Returns',
 			xaxis_title='Year',
-			template='plotly_dark',
-			plot_bgcolor= '#192734',
-			paper_bgcolor= '#192734',
+			# template='plotly_dark',
+			font=dict(color=DARK_ACCENT),
+			plot_bgcolor= SECONDARY,
+			paper_bgcolor= SECONDARY,
 		)
 
 		return beautify_plotly(fig)
@@ -557,20 +575,22 @@ def key_metrics(symbol):
 				
 		# create plotly fig
 		df = pd.DataFrame(xy_data).T
+		# add_csv_to_folder(df, "drawdown_underwater_plot")
+		df_dict['Drawdown Underwater'] = df
 		fig = px.area(df, x=0, y=1)
 
 		fig.update_layout(
 			title= 'Underwater Plot',
 			yaxis_title='Drawdown',
 			xaxis_title='Year',
-			template='plotly_dark',
-			plot_bgcolor= '#192734',
-			paper_bgcolor= '#192734',
+			# template='plotly_dark',
+			font=dict(color=DARK_ACCENT),
+			plot_bgcolor= SECONDARY,
+			paper_bgcolor= SECONDARY,
 		)
 
 		return beautify_plotly(fig)
-
-	return sharpe_ratio, max_drawdown, cumulative_returns_plot(), annual_monthly_returns_plot(), rolling_sharpe_plot(), drawdown_periods_plot(), drawdown_underwater_plot()
+	return full_report(), top_stats(), cumulative_returns_plot(), annual_monthly_returns_plot(), rolling_sharpe_plot(), drawdown_periods_plot(), drawdown_underwater_plot()
 
 
 
@@ -584,9 +604,9 @@ def balance_sheet(symbol):
 
 	return html.Div([
 			dbc.Card(
-				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 								style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-				]), color = '#192734'
+				]), color = SECONDARY
 			),  
 		])
 
@@ -596,9 +616,9 @@ def eps_trend(symbol):
 	df = si.get_analysts_info(ticker)['EPS Trend'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 
@@ -607,9 +627,9 @@ def growth_estimates(symbol):
 	df = si.get_analysts_info(ticker)['Growth Estimates'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 
@@ -618,9 +638,9 @@ def earnings_estimate(symbol):
 	df = si.get_analysts_info(ticker)['Earnings Estimate'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 def revenue_estimate(symbol):
@@ -628,9 +648,9 @@ def revenue_estimate(symbol):
 	df = si.get_analysts_info(ticker)['Revenue Estimate'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 def earnings_history(symbol):
@@ -638,9 +658,9 @@ def earnings_history(symbol):
 	df = si.get_analysts_info(ticker)['Earnings History'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 def eps_revisions(symbol):
@@ -648,9 +668,9 @@ def eps_revisions(symbol):
 	df = si.get_analysts_info(ticker)['EPS Revisions'].assign(hack='').set_index('hack')
 	return html.Div([
 		dbc.Card(
-			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+			dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 							style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-			]), color = '#192734'
+			]), color = SECONDARY
 		),  
 	])
 
@@ -662,9 +682,9 @@ def income_statement(symbol):
 	df = pd.DataFrame(data.financials).T
 	return html.Div([
 			dbc.Card(
-				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 								style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER, style_table={'overflowX': 'auto'})
-				]), color = '#192734'
+				]), color = SECONDARY
 			),  
 		])
 
@@ -676,27 +696,82 @@ def cash_flows(symbol):
 	df = pd.DataFrame(data.cashflow).T
 	return html.Div([
 			dbc.Card(
-				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns],
+				dbc.CardBody([dash_table.DataTable(df.to_dict('records'), [{'name': i, 'id': i} for i in df.columns],
 								style_data=DATATABLE_STYLE, style_header=DATATABLE_HEADER,style_table={'overflowX': 'auto'})
-				]), color = '#192734'
+				]), color = SECONDARY
 			),  
 		])
 
 
 def register_callbacks(app):
 
-	@app.callback(Output('financials', 'children'), Input('financials-tabs', 'value'), Input('selected-symbol', 'value')
+	@app.callback(
+		Output("download-headline-stats-csv", "data"),
+		[Input("headline_stats_df", "n_clicks"), Input("headline_stats_df", "children")],
+		prevent_initial_call=True,
 	)
-	def render_financials(tab, symbol):
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
+	
+	@app.callback(
+		Output("download-center-stock-csv", "data"),
+		[Input("center_stock", "n_clicks"), Input("center_stock", "children")],
+		prevent_initial_call=True,
+	)
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
 
-		if symbol is None:
-			symbol = 'AAPL'
+	@app.callback(
+		Output("download-cumulative-returns-csv", "data"),
+		[Input("cumulative_returns_plot", "n_clicks"), Input("cumulative_returns_plot", "children")],
+		prevent_initial_call=True,
+	)
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
 
-		if tab == 'balance-sheet':
-			return balance_sheet(symbol)
-		elif tab == 'income-statement':
-			return income_statement(symbol)
-		elif tab == 'cash-flows':
-			return cash_flows(symbol)
+	@app.callback(
+		Output("download-anual-monthly-returns-csv", "data"),
+		[Input("annual_monthly_returns_plot", "n_clicks"), Input("annual_monthly_returns_plot", "children")],
+		prevent_initial_call=True,
+	)
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
+
+	@app.callback(
+		Output("download-rolling-sharpe-csv", "data"),
+		[Input("rolling_sharpe_plot", "n_clicks"), Input("rolling_sharpe_plot", "children")],
+		prevent_initial_call=True,
+	)
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
+
+	@app.callback(
+		Output("download-drawdown-underwater-csv", "data"),
+		[Input("drawdown_underwater_plot", "n_clicks"), Input("drawdown_underwater_plot", "children")],
+		prevent_initial_call=True,
+	)
+	def func(n_clicks, name):
+		df = df_dict[name]
+		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
+
+
+	# @app.callback(Output('financials', 'children'), Input('financials-tabs', 'value'), Input('selected-symbol', 'value')
+	# )
+	# def render_financials(tab, symbol):
+
+	# 	if symbol is None:
+	# 		symbol = 'AAPL'
+
+	# 	if tab == 'balance-sheet':
+	# 		return balance_sheet(symbol)
+	# 	elif tab == 'income-statement':
+	# 		return income_statement(symbol)
+	# 	elif tab == 'cash-flows':
+	# 		return cash_flows(symbol)
 
 	
