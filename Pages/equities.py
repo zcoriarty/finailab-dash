@@ -12,7 +12,6 @@ from dash import html, dcc, dash_table
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
-
 import plotly.express as px
 from plotly.tools import mpl_to_plotly
 import dash.dependencies

@@ -69,12 +69,12 @@ nested_options = tickers_dict[names[0]]
 cache = diskcache.Cache('./cache')
 background_callback_manager = DiskcacheManager(cache)
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 
 server = app.server
 
 server.wsgi_app = WhiteNoise(server.wsgi_app, root='Static/')
-server.wsgi_app = WhiteNoise(server.wsgi_app, root='assets/')
+# server.wsgi_app = WhiteNoise(server.wsgi_app, root='assets/')
 
 eq.register_callbacks(app)
 equity_visuals.register_callbacks(app)
