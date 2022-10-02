@@ -94,14 +94,7 @@ def make_layout(symbol):
 					# 	eps_revisions(symbol)
 					# ], width=3),
 					dbc.Col([
-						centerStock(symbol)
-					], width=9),
-					dbc.Col([
-						full_report
-					], width=3),
-				], align='center'), 
-				html.Br(),
-				dbc.Tabs(
+						dbc.Tabs(
 					[
 						dbc.Tab(cumulative_returns_plot, label='Cumulative Returns', className='nav-pills'),
 						dbc.Tab(annual_monthly_returns_plot, label='Annual and Monthly Returns', className='nav-pills'),
@@ -113,31 +106,14 @@ def make_layout(symbol):
 					id='tabs',
 					# active_tab='tab-1',
 				),
-				# dbc.Row([
-				# 	dbc.Col([
-				# 		dcc.Tabs(id='financials-tabs', value='balance-sheet', children=[
-				# 				dcc.Tab(label='Balance Sheet', value='balance-sheet', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
-				# 				dcc.Tab(label='Income Statement', value='income-statement', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
-				# 				dcc.Tab(label='Cash Flows', value='cash-flows', style=TAB_STYLE, selected_style=TAB_SELECTED_STYLE),
-				# 			], style=TABS_STYLES),
-							
-						
-				# 		], width=9),
-				# ]),
-				# dbc.Row([
-				# 	dbc.Col([
-				# 		html.Br(),
-				# 		dcc.Loading(
-				# 			id='loading-1',
-				# 			type='default',
-				# 			children=html.Div(id='financials'),
-				# 			color = 'white'
-				# 		),
-				# 	], width=9),
-				# 	dbc.Col([
-				# 		growth_estimates(symbol)
-				# 	], width=3),
-				# ], align='center'),      
+					], width=9),
+					dbc.Col([
+						full_report
+					], width=3),
+				], align='center'), 
+				html.Br(),
+				
+     
 			]), color = PRIMARY, style ={'border-radius': 10} # all cell border
 		)
 	], style={'margin-bottom':'30rem'})
@@ -235,101 +211,6 @@ def beautify_plotly(fig):
 			),  
 		])
 
-
-# create main equity plot
-def centerStock(symbol):
-
-	from plotly.subplots import make_subplots
-
-	# Override Yahoo Finance 
-	yf.pdr_override()
-
-
-	# Retrieve stock data frame (df) from yfinance API at an interval of 1m 
-	df = yf.download(tickers=symbol,period='1d',interval='1m')
-	# add_csv_to_folder(df, "center_stock")
-	df_dict['Equity Timeseries'] = df
-	# print(yf_data)
-	# df = pd.DataFrame(yf_data[symbol])
-
-	# add Moving Averages (5day and 20day) to df 
-	df['MA5'] = df['Close'].rolling(window=5).mean()
-	df['MA20'] = df['Close'].rolling(window=20).mean()
-
-	# print(df)
-
-	# Declare plotly figure (go)
-	fig=go.Figure()
-
-	# Creating figure with second y-axis
-	fig = make_subplots(specs=[[{'secondary_y': True}]])
-
-	# Adding line plot with close prices and bar plot with trading volume
-	fig.add_trace(go.Scatter(x=df.index, y=df['Close'], name=symbol+' Close'), secondary_y=False)
-	fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume', opacity=0.5, marker_color=['black'], marker_colorscale='Rainbow',), secondary_y=True)
-
-	fig.add_trace(go.Candlestick(x=df.index,
-					open=df['Open'],
-					high=df['High'],
-					low=df['Low'],
-					close=df['Close'], name = 'market data'))
-
-	# Add 5-day Moving Average Trace
-	fig.add_trace(go.Scatter(x=df.index, 
-							y=df['MA5'], 
-							opacity=0.7, 
-							line=dict(color='blue', width=2), 
-							name='MA 5'))
-	# Add 20-day Moving Average Trace
-	fig.add_trace(go.Scatter(x=df.index, 
-							y=df['MA20'], 
-							opacity=0.7, 
-							line=dict(color='orange', width=2), 
-							name='MA 20'))
-
-	fig.update_xaxes(
-		# rangeslider_visible=True,
-		rangeselector=dict(
-			buttons=list([
-				dict(count=15, label='15m', step='minute', stepmode='backward'),
-				dict(count=45, label='45m', step='minute', stepmode='backward'),
-				dict(count=1, label='HTD', step='hour', stepmode='todate'),
-				dict(count=3, label='3h', step='hour', stepmode='backward'),
-				dict(step='all')
-			]), bgcolor = SECONDARY
-		)
-	)
-	
-
-	# Updating layout
-	fig.update_layout(
-		xaxis_rangeslider_visible=True,
-		hovermode='x'
-	)
-
-	fig.update_layout(
-		title= str(symbol)+' Live Share Price:',
-		yaxis_title='Stock Price (USD per Shares)',
-		# template='plotly_dark',
-		plot_bgcolor= SECONDARY,
-		paper_bgcolor= SECONDARY,   
-		font=dict(color=DARK_ACCENT),
-	)
-
-
-
-	return html.Div([
-			dbc.Card(
-				dbc.CardBody([
-					dcc.Graph(
-						figure=fig,
-					config={
-						'displayModeBar': False
-					}
-					)
-				]), color = SECONDARY, style ={'border-radius': 10}
-			),  
-		])
 key_metrics_df = pd.DataFrame()
 def key_metrics(symbol):
 	
@@ -700,63 +581,6 @@ def cash_flows(symbol):
 				]), color = SECONDARY
 			),  
 		])
-
-
-def register_callbacks(app):
-
-	@app.callback(
-		Output("download-headline-stats-csv", "data"),
-		[Input("headline_stats_df", "n_clicks"), Input("headline_stats_df", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
-	
-	@app.callback(
-		Output("download-center-stock-csv", "data"),
-		[Input("center_stock", "n_clicks"), Input("center_stock", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
-
-	@app.callback(
-		Output("download-cumulative-returns-csv", "data"),
-		[Input("cumulative_returns_plot", "n_clicks"), Input("cumulative_returns_plot", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
-
-	@app.callback(
-		Output("download-anual-monthly-returns-csv", "data"),
-		[Input("annual_monthly_returns_plot", "n_clicks"), Input("annual_monthly_returns_plot", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
-
-	@app.callback(
-		Output("download-rolling-sharpe-csv", "data"),
-		[Input("rolling_sharpe_plot", "n_clicks"), Input("rolling_sharpe_plot", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
-
-	@app.callback(
-		Output("download-drawdown-underwater-csv", "data"),
-		[Input("drawdown_underwater_plot", "n_clicks"), Input("drawdown_underwater_plot", "children")],
-		prevent_initial_call=True,
-	)
-	def func(n_clicks, name):
-		df = df_dict[name]
-		return dcc.send_data_frame(df.to_csv, "finailab_data.csv")
 
 
 	# @app.callback(Output('financials', 'children'), Input('financials-tabs', 'value'), Input('selected-symbol', 'value')

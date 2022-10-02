@@ -93,8 +93,9 @@ def get_modal_content(pathname, symbol):
 
                 ```
                 '''.format(symbol=symbol)
-    code_dict['/backtesting'] = equity_code
+    code_dict['/backtest'] = equity_code
     code_dict['/'] = equity_code
+    code_dict['/home'] = equity_code
 
     code_dict['/equity-visuals'] = '''
                 **Packages**

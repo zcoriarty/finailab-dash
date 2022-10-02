@@ -33,39 +33,20 @@ def make_layout(symbol):
 			dbc.CardBody([
 				dbc.Row([
 					dbc.Col([
-						drawText()
-					], width=2),
-					dbc.Col([
-						drawText()
-					], width=2),
-					dbc.Col([
-						drawText()
-					], width=2),
-					dbc.Col([
-						drawText()
-					], width=2),
-					dbc.Col([
-						drawText()
-					], width=2),
-					dbc.Col([
-						drawText()
-					], width=2),
-					
-				]), 
-				html.Br(),
-				dbc.Row([
-					dbc.Col([
 						update_news()
 					], width=3),
 					dbc.Col([
 						main_graph(symbol)
 					], width=9),
 				], align='center'),      
-			]), color = '#15202b' # all cell border
+			html.Br(),
+	
+			]), color = PRIMARY, style ={'border-radius': 10} # all cell border
 		)
-	])
+	], style={'margin-bottom':'30rem'})
 
-
+PRIMARY = '#FFFFFF'
+SECONDARY = '#FFFFFF'
 
 DATATABLE_STYLE = {
     'color': 'white',
@@ -140,13 +121,12 @@ def update_news():
     return html.Div([
 			dbc.Card(
 				dbc.CardBody([
-					html.P(className="p-news", children="Headlines", style={'color': 'white',
-						'backgroundColor': '#192734', 'fontSize':'30px', 'fontWeight':'Medium'}),
+					html.P(className="p-news", children="Headlines", style={'fontSize':'30px', 'fontWeight':'Medium'}),
 					html.P(
 						className="p-news float-right",
 						children="Last update : "
 						+ datetime.datetime.now().strftime("%H:%M:%S"),
-						style=LINK_TABLE_HEADER
+						# style=LINK_TABLE_HEADER
 					),
 					html.Table(
 						className="table-news",
@@ -166,9 +146,9 @@ def update_news():
 								]
 							)
 							for i in range(min(len(df), max_rows))
-						], style=LINK_TABLE
+						],
 					),
-				]), color = '#192734'
+				]), color = SECONDARY, style ={'border-radius': 10}
 			),
         ]
     )
@@ -196,9 +176,9 @@ def main_graph(countries):
 
 	fig.update_layout(
 		title=countries,
-		template='plotly_dark',
-		plot_bgcolor= '#192734',
-		paper_bgcolor= '#192734',   
+		# template='plotly_dark',
+		# plot_bgcolor= '#192734',
+		# paper_bgcolor= '#192734',   
 	)
 	fig.update_yaxes(categoryorder='category ascending')
 
@@ -211,6 +191,6 @@ def main_graph(countries):
 						'displayModeBar': False
 					}
 					)
-				]), color = '#192734'
+				]), color = SECONDARY, style ={'border-radius': 10}
 			),  
 		])

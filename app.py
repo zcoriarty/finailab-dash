@@ -24,17 +24,16 @@ import numpy as np
 import json
 
 # import files
-from Pages import equities as eq
+from Pages import home as eq
+from Pages import backtest as bt_view
 from Pages import crypto, fx, equity_visuals, code_modal
-
-import multiprocessing, threading
-
 
 PRIMARY = '#FFFFFF'
 SECONDARY = '#FFFFFF'
-ACCENT = '#EF5700'
+ACCENT = '#98C1D9'
 SIDEBAR = '#F7F7F7'
 
+asset_class = ''
 # get tickers
 sp_tickers = pd.read_csv('Static/Data/sp500_companies.csv', usecols=['Symbol'])
 sp_tickers = sp_tickers['Symbol'].values.tolist()
@@ -56,16 +55,17 @@ with open('Static/Dropdown Data/companies.json', 'r') as read_file:
 	company_list = json.load(read_file)
 company_options_list = []
 for company in company_list:
-	# company_options_list.append({'label': str(company_list[company] + ' (' + company + ')'),
-	# 							'value': company})
     company_options_list.append(company)
 
-tickers_dict = {'/': company_list, '/backtesting': company_list, '/equity-visuals': [], '/crypto': crypto_tickers, '/FX': country_lst, '/fixed-income': [], '/commodities': [], '/sentiment': [], }
+# set asset specific drowdown values
+tickers_dict = {'Equities': company_options_list, 'Crypto': crypto_tickers, 'FX': country_lst, 'Fixed Income': [], 'Commodities': [], 'Sentiment': []}
 names = list(tickers_dict.keys())
 nested_options = tickers_dict[names[0]]
 
-# NEED TO BE CHANGED TO CELERY FOR PRODUCTION
+asset_classes = ['Equities', 'Crypto', 'FX', 'Commodities', 'Fixed Income']
+properties = ['Open', 'Low', 'High', 'Volume']
 
+# NEED TO BE CHANGED TO CELERY FOR PRODUCTION
 cache = diskcache.Cache('./cache')
 background_callback_manager = DiskcacheManager(cache)
 
@@ -139,38 +139,40 @@ DATATABLE_STYLE = {
 # Sticky dash board header
 navbar = dbc.NavbarSimple(
     children=[
-        dbc.DropdownMenu(
-            [
-                dbc.DropdownMenuItem(
-                    "Top Stats", id="headline_stats_df", n_clicks=0
-                ),
-                dbc.DropdownMenuItem(
-                    "Equity Timeseries", id="center_stock", n_clicks=0
-                ),
-                dbc.DropdownMenuItem(
-                    "Cumulative Returns", id="cumulative_returns_plot", n_clicks=0
-                ),
-                dbc.DropdownMenuItem(
-                    "Annual/monthly Returns", id="annual_monthly_returns_plot", n_clicks=0
-                ),
-                dbc.DropdownMenuItem(
-                    "Rolling Sharpe", id="rolling_sharpe_plot", n_clicks=0
-                ),
-                dbc.DropdownMenuItem(
-                    "Drawdown Underwater", id="drawdown_underwater_plot", n_clicks=0
-                ),
+        # dbc.DropdownMenu(
+        #     [
+        #         dbc.DropdownMenuItem(
+        #             "Top Stats", id="headline_stats_df", n_clicks=0
+        #         ),
+        #         dbc.DropdownMenuItem(
+        #             "Equity Timeseries", id="center_stock", n_clicks=0
+        #         ),
+        #         dbc.DropdownMenuItem(
+        #             "Cumulative Returns", id="cumulative_returns_plot", n_clicks=0
+        #         ),
+        #         dbc.DropdownMenuItem(
+        #             "Annual/monthly Returns", id="annual_monthly_returns_plot", n_clicks=0
+        #         ),
+        #         dbc.DropdownMenuItem(
+        #             "Rolling Sharpe", id="rolling_sharpe_plot", n_clicks=0
+        #         ),
+        #         dbc.DropdownMenuItem(
+        #             "Drawdown Underwater", id="drawdown_underwater_plot", n_clicks=0
+        #         ),
                 
-            ],
-            label="Download Data", toggle_style={"color": "white", "backgroundColor": ACCENT, "border":"0"}, style = {"margin-right": "5px"}
-        ),
-        dcc.Download(id="download-headline-stats-csv"),
+        #     ],
+        #     label="Download Data", toggle_style={"color": "white", "backgroundColor": ACCENT, "border":"0"}, style = {"margin-right": "5px"}
+        # ),
+    
+        # dcc.Download(id="download-headline-stats-csv"),
         dcc.Download(id="download-center-stock-csv"),
-        dcc.Download(id="download-cumulative-returns-csv"),
-        dcc.Download(id="download-anual-monthly-returns-csv"),
-        dcc.Download(id="download-rolling-sharpe-csv"),
-        dcc.Download(id="download-drawdown-underwater-csv"),
+        # dcc.Download(id="download-cumulative-returns-csv"),
+        # dcc.Download(id="download-anual-monthly-returns-csv"),
+        # dcc.Download(id="download-rolling-sharpe-csv"),
+        # dcc.Download(id="download-drawdown-underwater-csv"),
         # html.Br(),
-        dbc.Button('See Code', id='open-modal', className='me-1', outline=True, n_clicks=0, style = {'color': SIDEBAR, 'background-color': ACCENT, "margin-right": "5px", "border":"0"}),  
+        dbc.Button('Download Data', id="center_stock", n_clicks=0, style = {'color': ACCENT, 'background-color': SIDEBAR, "border-color":ACCENT, "margin-right": "5px"}),
+        dbc.Button('See Code', id='open-modal', outline=True, className='mr-1', n_clicks=0, style = {'color': ACCENT, 'background-color': SIDEBAR, "border-color":ACCENT, "margin-right": "5px"}),  
         dbc.Modal(
             [
                 dbc.ModalHeader(dbc.ModalTitle('Python Code')),
@@ -185,14 +187,26 @@ navbar = dbc.NavbarSimple(
         
     ],
     sticky='top',
-    brand='Quanturf- backtesting',
+    brand='Quanturf - backtesting',
     id='navbar',
     brand_href='#',
     color=SIDEBAR,
     dark=True,
     fluid=True,
 )
+today = date.today()
 
+offset = max(1, (today.weekday() + 6) % 7 - 3)
+timedlt1 = timedelta(offset)
+
+most_recent = today - timedlt1
+
+offset = max(1, (today.weekday() + 7) % 7 - 3)
+timedlt1 = timedelta(offset)
+
+second_most_recent = today - timedlt1
+
+# date_object = datetime.strptime(str(most_recent), '%Y-%m-%d %H:%M:%S')
 # sidebar, including input for content window
 sidebar = html.Div(
     [
@@ -206,15 +220,36 @@ sidebar = html.Div(
                 #                                                 ]
                 #                 , menu_variant='dark', nav=True, group=True
                 # ),
-                dbc.NavLink('Backtesting', href='/backtesting', id='backtesting-link', className='nav-pills'),
-                dbc.NavLink('Visualizations', href='/equity-visuals', id='equity-visuals-link', className='nav-pills'),
-                dbc.NavLink('Crypto', href='/crypto', id='crypto-link', className='nav-pills'),
-                dbc.NavLink('FX', href='/FX', id='FX-link', className='nav-pills'),
-                dbc.NavLink('Fixed Income', href='/fixed-income', id='fixed-income-link', className='nav-pills'),
-                dbc.NavLink('Commodities', href='/commodities', id='commodities-link', className='nav-pills'),
-                dbc.NavLink('Sentiment', href='/sentiment', id='sentiment-link', className='nav-pills'),
+                dbc.NavLink('Home', href='/home', id='home-link', className='nav-pills'),
+                dbc.NavLink('Backtest', href='/backtest', id='backtest-link', className='nav-pills'),
+                dbc.NavLink('Contact Us', href='/contact-us', id='contact-us-link', className='nav-pills'),
+                # dbc.NavLink('Visualizations', href='/equity-visuals', id='equity-visuals-link', className='nav-pills'),
+                # dbc.NavLink('Crypto', href='/crypto', id='crypto-link', className='nav-pills'),
+                # dbc.NavLink('FX', href='/FX', id='FX-link', className='nav-pills'),
+                # dbc.NavLink('Fixed Income', href='/fixed-income', id='fixed-income-link', className='nav-pills'),
+                # dbc.NavLink('Commodities', href='/commodities', id='commodities-link', className='nav-pills'),
+                # dbc.NavLink('Sentiment', href='/sentiment', id='sentiment-link', className='nav-pills'),
                 html.Br(),
-                dcc.Dropdown(id='selected-symbol', style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
+                dcc.DatePickerRange(
+                    id='my-date-picker-range',
+                    min_date_allowed=date(2000, 8, 5),
+                    # max_date_allowed=date(2017, 9, 19),
+                    start_date=second_most_recent,
+                    # initial_visible_month=date(2022, 1, 1),
+                    end_date=most_recent,
+                    style={
+                        'background-color': PRIMARY,
+                        'color': 'black',
+                        'zIndex': 100000
+                    },
+                    calendar_orientation='vertical',
+                ),
+                html.Br(),
+                dcc.Dropdown(asset_classes, 'Equities', id='selected-asset-class', style=SEARCH_STYLE, clearable=False, placeholder='Select Asset Class...'),
+                html.Br(),
+                dcc.Dropdown(value='AAPL', id='selected-symbol', style=SEARCH_STYLE, clearable=False, placeholder='Select Ticker...'),
+                html.Br(),
+                dcc.Dropdown(properties, 'Open', id='selected-property', style=SEARCH_STYLE, clearable=False, placeholder='Select Property...'),
                 html.Br(),
                 # dcc.DatePickerRange(
                 #     id='my-date-picker-range',
@@ -300,19 +335,19 @@ app.callback(
     State('modal-content', 'is_open'),
 )(toggle_modal)
 
-categories = ['backtesting','equity-visuals', 'crypto', 'FX', 'fixed-income', 'commodities', 'sentiment']
-# adjust dropdown tickers for a given tab
-@app.callback(Output('selected-symbol', 'options'), [Input('url', 'pathname')]
-)
-def update_dropdown(name):
+categories = ['home','contact-us', 'backtest']
 
-    
-    if name == 'FX':
-        return [{'label': i, 'value': i} for i in tickers_dict[name]]
-    if name in ['backtesting','equity-visuals']:
-        return [{'label': str(company_list[company] + ' (' + company + ')'), 'value': company} for company in tickers_dict[name]]
+# adjust dropdown tickers for a given tab
+@app.callback(Output('selected-symbol', 'options'),
+              [Input('selected-asset-class', 'value')]
+)
+def update_dropdown(asset_class):
+    asset_class = asset_class
+    if asset_class == 'Equities':
+        return tickers_dict[asset_class]
     else:
-        return [{'label': i, 'value': i} for i in tickers_dict[name]]
+        return [{'label': i, 'value': i} for i in tickers_dict[asset_class]]
+
 
 @app.callback(
     [
@@ -352,7 +387,7 @@ def toggle_sidebar(n, nclick):
 def toggle_active_links(pathname):
     if pathname == '/':
         # Treat page 1 as the homepage / index
-        return True, False, False, False, False, False, False
+        return True, False, False
     return [pathname == f'/{i}' for i in categories]
 
 # communicate with 'see code' content dictionary
@@ -360,22 +395,15 @@ def toggle_active_links(pathname):
 def render_code(pathname, symbol):
     return code_modal.get_modal_content(pathname, symbol)
     
-@app.callback(Output('page-content', 'children'), [Input('url', 'pathname'), Input('selected-symbol', 'value')])
-def render_page_content(pathname, symbol):
-    if pathname in ['/', '/backtesting']:
-        return eq.make_layout(symbol)
-    elif pathname in ['/equity-visuals']:
-        return equity_visuals.make_layout()
-    elif pathname == '/crypto':
-        return crypto.make_layout(symbol)
-    elif pathname == '/FX':
-        return fx.make_layout(symbol)
-    elif pathname == '/fixed-income':
-        return html.P('Oh cool, this is page 3!')
-    elif pathname == '/commodities':
-        return html.P('Oh cool, this is page 4!')
-    elif pathname == '/sentiment':
-        return html.P('Oh cool, this is page 5!')
+@app.callback(Output('page-content', 'children'), [Input('url', 'pathname'), Input('selected-symbol', 'value'),Input('my-date-picker-range', 'start_date'),
+    Input('my-date-picker-range', 'end_date')])
+def render_page_content(pathname, symbol, start, end):
+    if pathname in ['/', '/home']:
+        return eq.make_layout(symbol, start, end)
+    elif pathname == '/backtest':
+        return bt_view.make_layout(symbol)
+    elif pathname == '/contact-us':
+        pass
     # If the user tries to reach a different page, return a 404 message
     return html.Div(
         dbc.Container(
